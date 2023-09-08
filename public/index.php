@@ -131,12 +131,29 @@ if ($_SERVER["REQUEST_METHOD"] == 'POST') {
     }
     var_dump($hashedPassword);
     // récupération et validation de l'image de profil
-    $allowedType = array('png', 'jpg', 'jpeg');
-    // check la taille du fichier
-    if ($_FILES['profilPicture']['size'] > 5000000) {
-        $errors['profilPicture'] = 'Le fichier est trop gros';
+    try {
+        $formFile = $_FILES['profilPicture'];
+        if (empty($formFile['name'])) {
+            throw new Exception("Veuillez renseigner un fichier", 1);
+        }
+        if ($formFile['error'] != 0) {
+            throw new Exception("Fichier non envoyé", 2);
+        }
+        if (!in_array($formFile['type'], VALID_EXTENSIONS)) {
+            throw new Exception("Mauvaise extension de fichier", 3);
+        }
+        if ($formFile['size'] >= FILE_SIZE) {
+            throw new Exception("Taille du fichier dépassé", 4);
+        }
+        $extension = pathinfo($formFile['name'], PATHINFO_EXTENSION);
+        $newNameFile = uniqid('pp_') . '.' . $extension;
+        $from = $formFile['tmp_name'];
+        $to = './public/uploads/user/' . $newNameFile;
+        move_uploaded_file($from, $to);
+        
+    } catch (\Throwable $th) {
+        $errors['profilPicture'] = $th->getMessage();
     }
-    //check du type du fichier
 
 }
 
@@ -233,10 +250,8 @@ if ($_SERVER["REQUEST_METHOD"] == 'POST') {
                         <!-- Partie image de profil -->
                         <div class="form-group text-white fw-bold">
                             <label for="profilPicture" class="form-label mt-4">Image de profil :</label>
-                            <input type="hidden" name="MAX_FILES_SIZE" value="5000000">
-                            <!-- permet de mettre une taille maximale sur le fichier, en octets (ici 5mo)-->
                             <input class="form-control" type="file" name="profilPicture" id="profilPicture" accept="image/png, image/jpeg, image/jpg">
-                            <p class="error"> <?= $errors['profilPicture'] ?> </p>
+                            <p class="error"> <?= $errors['profilPicture'] ?? '' ?> </p>
                         </div>
                         <!-- Partie URL LinkedIn -->
                         <div class="form-group text-white fw-bold">
